@@ -23,36 +23,34 @@ async function getPMResumes(activeEmail) {
 
     // const usersDB = client.db(DB_NAME);
     const usersCol = client.db(DB_NAME).collection(USERS_COL);
+    const pmCol = client.db(DB_NAME).collection(PM_RESUMES_COL);
 
-    // query parameter
-    const queryParams = [
-      {
-        $match: {
-          "credential.login_email": {activeEmail},
-        },
-      },
-      {
-        $lookup: {
-          from: "PM_Resumes",
-          localField: "pm_resume_id",
-          foreignField: "pm_resume_id",
-          as: "User_PM_Resumes",
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          first_name: 1,
-          last_name: 1,
-          User_PM_Resumes: 1,
-        },
-      },
-    ];
+    // console.log("ACTIVE EMAIL", activeEmail);
 
-    console.log("QUERY PARAMETER", queryParams);
+    // query parameter for user collection
+    // let userQuery = {
+    //   "credential": {
+    //     "login_email": activeEmail
+    //   }
+    // }
+    // user collection query parameter
+    let userQuery = {
+      "credential.login_email": activeEmail
+    }
 
-    let queryResult = await usersCol.aggregate(queryParams).toArray();
-    // console.log("DB QUERY RESULT", queryResult);
+    // console.log("USER QUERY", userQuery);
+
+    // get the currently active user using active email
+    let activeUser = await usersCol.find(userQuery).toArray();
+    // console.log("ACTIVE USER:", activeUser);
+
+    // get the resume ids of the current active user
+    let pmResumeIds = activeUser[0].pm_resume_id;
+    // console.log("CURRENT USER PM RESUME IDS:", pmResumeIds);
+
+    // query resumes from PM Resume collection where pm_resume_id in pmResumeIds
+    let queryResult = await pmCol.find({"pm_resume_id": {$in: pmResumeIds}}).toArray();
+    console.log("DB QUERY RESULT", queryResult);
 
     return queryResult;
   } finally {
